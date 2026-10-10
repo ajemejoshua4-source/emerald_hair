@@ -1,0 +1,3 @@
+<?php
+namespace App\Http\Controllers; use App\Models\{Enquiry,NewsletterSubscriber}; use Illuminate\Http\Request;
+class ContactController extends Controller { public function contact(){return view('contact');} public function enquiry(Request $r){$d=$r->validate(['name'=>'required|string|max:100','email'=>'nullable|email','phone'=>'nullable|string|max:30','subject'=>'nullable|string|max:150','message'=>'required|string|max:3000']);Enquiry::create($d);return back()->with('success','Thank you. Emerald Hair will get back to you shortly.');} public function newsletter(Request $r){$r->validate(['email'=>'required|email']);NewsletterSubscriber::firstOrCreate(['email'=>$r->email]);return back()->with('success','You are on the Emerald Hair list.');} }
