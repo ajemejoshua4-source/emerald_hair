@@ -43,6 +43,14 @@ services:
         value: "ajemeoluchi@gmail.com"
       - key: EMERALD_ADMIN_PASSWORD
         sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_MERCHANT_EMAIL
+        sync: false
+      - key: PAYSTACK_CALLBACK_URL
+        sync: false
 databases:
   - name: emerald-hair-db
     plan: free

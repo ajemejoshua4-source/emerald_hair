@@ -56,6 +56,8 @@ class StorefrontController extends Controller
     {
         abort_unless($product->is_active, 404);
 
+        $product->load('activeVariants');
+
         $related = Product::with('category')
             ->where('is_active', true)
             ->where('category_id', $product->category_id)

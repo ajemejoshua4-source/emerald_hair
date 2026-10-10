@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -50,7 +51,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::get('/bag', [CartController::class, 'index'])->name('cart');
 Route::post('/bag/{product}/add', [CartController::class, 'add'])->name('cart.add');
 Route::patch('/bag', [CartController::class, 'update'])->name('cart.update');
-Route::delete('/bag/{id}', [CartController::class, 'remove'])->name('cart.remove');
+Route::delete('/bag/{key}', [CartController::class, 'remove'])->name('cart.remove');
 
 /*
 |--------------------------------------------------------------------------
@@ -66,7 +67,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/checkout/{order}/success', [CheckoutController::class, 'success'])->name('checkout.success');
+
+    Route::get('/checkout/{order}/pay', [PaymentController::class, 'pay'])->name('payments.pay');
+    Route::get('/payments/paystack/callback', [PaymentController::class, 'callback'])->name('payments.callback');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Payment webhooks (unauthenticated, CSRF-exempt, signature verified)
+|--------------------------------------------------------------------------
+*/
+Route::post('/payments/paystack/webhook', [PaymentController::class, 'webhook'])->name('payments.webhook');
 
 /*
 |--------------------------------------------------------------------------
@@ -83,6 +94,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/products/{product}', [AdminController::class, 'productUpdate'])->name('products.update');
     Route::delete('/products/{product}', [AdminController::class, 'productDelete'])->name('products.delete');
 
+    Route::get('/products/{product}/variants', [AdminController::class, 'variants'])->name('variants');
+    Route::post('/products/{product}/variants', [AdminController::class, 'variantStore'])->name('variants.store');
+    Route::put('/variants/{variant}', [AdminController::class, 'variantUpdate'])->name('variants.update');
+    Route::delete('/variants/{variant}', [AdminController::class, 'variantDelete'])->name('variants.delete');
+
     Route::get('/categories', [AdminController::class, 'categories'])->name('categories');
     Route::post('/categories', [AdminController::class, 'categoryStore'])->name('categories.store');
     Route::delete('/categories/{category}', [AdminController::class, 'categoryDelete'])->name('categories.delete');
@@ -92,4 +108,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::get('/enquiries', [AdminController::class, 'enquiries'])->name('enquiries');
     Route::patch('/enquiries/{enquiry}', [AdminController::class, 'enquiryUpdate'])->name('enquiries.update');
+
+    Route::get('/delivery-zones', [AdminController::class, 'deliveryZones'])->name('delivery-zones');
+    Route::post('/delivery-zones', [AdminController::class, 'deliveryZoneStore'])->name('delivery-zones.store');
+    Route::delete('/delivery-zones/{zone}', [AdminController::class, 'deliveryZoneDelete'])->name('delivery-zones.delete');
+
+    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+    Route::put('/settings', [AdminController::class, 'settingsUpdate'])->name('settings.update');
 });

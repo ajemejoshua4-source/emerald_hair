@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\DeliveryZone;
 use App\Models\Enquiry;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -22,11 +25,23 @@ class AdminController extends Controller
         ]);
     }
 
-    public function products()
+    public function products(Request $request)
     {
-        return view('admin.products.index', [
-            'products' => Product::with('category')->latest()->paginate(20),
-        ]);
+        $q = trim((string) $request->query('q', ''));
+
+        $products = Product::with('category')
+            ->withCount('variants')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($inner) use ($q) {
+                    $inner->where('name', 'like', '%'.$q.'%')
+                        ->orWhere('slug', 'like', '%'.$q.'%');
+                });
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.products.index', compact('products', 'q'));
     }
 
     public function productCreate()
@@ -57,7 +72,7 @@ class AdminController extends Controller
 
     public function productUpdate(Request $request, Product $product)
     {
-        $product->update($this->validatedProduct($request, $product));
+        $product->update($this->validatedProduct($request));
 
         return back()->with('success', 'Product updated.');
     }
@@ -68,6 +83,47 @@ class AdminController extends Controller
 
         return back()->with('success', 'Product deleted.');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Product variants
+    |--------------------------------------------------------------------------
+    */
+
+    public function variants(Product $product)
+    {
+        return view('admin.products.variants', [
+            'product' => $product,
+            'variants' => $product->variants()->orderBy('label')->get(),
+        ]);
+    }
+
+    public function variantStore(Request $request, Product $product)
+    {
+        $product->variants()->create($this->validatedVariant($request));
+
+        return back()->with('success', 'Variant added.');
+    }
+
+    public function variantUpdate(Request $request, ProductVariant $variant)
+    {
+        $variant->update($this->validatedVariant($request, $variant));
+
+        return back()->with('success', 'Variant updated.');
+    }
+
+    public function variantDelete(ProductVariant $variant)
+    {
+        $variant->delete();
+
+        return back()->with('success', 'Variant removed.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Categories
+    |--------------------------------------------------------------------------
+    */
 
     public function categories()
     {
@@ -100,11 +156,29 @@ class AdminController extends Controller
         return back()->with('success', 'Category deleted.');
     }
 
-    public function orders()
+    /*
+    |--------------------------------------------------------------------------
+    | Orders & enquiries
+    |--------------------------------------------------------------------------
+    */
+
+    public function orders(Request $request)
     {
-        return view('admin.orders.index', [
-            'orders' => Order::with('items')->latest()->paginate(20),
-        ]);
+        $q = trim((string) $request->query('q', ''));
+
+        $orders = Order::with('items')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($inner) use ($q) {
+                    $inner->where('order_number', 'like', '%'.$q.'%')
+                        ->orWhere('customer_name', 'like', '%'.$q.'%')
+                        ->orWhere('phone', 'like', '%'.$q.'%');
+                });
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.orders.index', compact('orders', 'q'));
     }
 
     public function orderUpdate(Request $request, Order $order)
@@ -137,12 +211,80 @@ class AdminController extends Controller
         return back()->with('success', 'Enquiry updated.');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Delivery zones
+    |--------------------------------------------------------------------------
+    */
+
+    public function deliveryZones()
+    {
+        return view('admin.delivery-zones', [
+            'zones' => DeliveryZone::orderBy('name')->get(),
+        ]);
+    }
+
+    public function deliveryZoneStore(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'fee' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        DeliveryZone::create([
+            'name' => $data['name'],
+            'fee' => $data['fee'],
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', 'Delivery zone added.');
+    }
+
+    public function deliveryZoneDelete(DeliveryZone $zone)
+    {
+        $zone->delete();
+
+        return back()->with('success', 'Delivery zone removed.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Store settings
+    |--------------------------------------------------------------------------
+    */
+
+    public function settings()
+    {
+        return view('admin.settings');
+    }
+
+    public function settingsUpdate(Request $request)
+    {
+        $data = $request->validate([
+            'store_email' => ['nullable', 'email', 'max:150'],
+            'store_phone' => ['nullable', 'string', 'max:40'],
+            'whatsapp' => ['nullable', 'string', 'max:40'],
+            'instagram' => ['nullable', 'url', 'max:255'],
+            'announcement' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        foreach ($data as $key => $value) {
+            Setting::set($key, $value);
+        }
+
+        return back()->with('success', 'Settings saved.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation helpers
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Validate the incoming product payload and normalise booleans/uploads.
-     *
      * @return array<string, mixed>
      */
-    private function validatedProduct(Request $request, ?Product $product = null): array
+    private function validatedProduct(Request $request): array
     {
         $data = $request->validate([
             'category_id' => ['required', 'exists:categories,id'],
@@ -174,6 +316,24 @@ class AdminController extends Controller
         if ($data['price_on_request']) {
             $data['price'] = null;
         }
+
+        return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatedVariant(Request $request, ?ProductVariant $variant = null): array
+    {
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:120'],
+            'sku' => ['nullable', 'string', 'max:60'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'stock' => ['required', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active');
 
         return $data;
     }

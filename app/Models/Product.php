@@ -43,6 +43,16 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class);
+    }
+
+    public function activeVariants(): HasMany
+    {
+        return $this->variants()->where('is_active', true);
+    }
+
     public function wishlists(): HasMany
     {
         return $this->hasMany(Wishlist::class);
@@ -53,11 +63,38 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function hasVariants(): bool
+    {
+        if ($this->relationLoaded('variants')) {
+            return $this->variants->isNotEmpty();
+        }
+
+        return $this->variants()->exists();
+    }
+
+    /**
+     * The lowest effective price across the product (used for "from ₦X" labels).
+     */
+    public function fromPrice(): ?float
+    {
+        $prices = $this->activeVariants()->pluck('price')->filter(fn ($p) => $p !== null)->map(fn ($p) => (float) $p);
+
+        if ($prices->isNotEmpty()) {
+            return (float) $prices->min();
+        }
+
+        return $this->price !== null ? (float) $this->price : null;
+    }
+
     /**
      * Whether the product can be purchased online right now.
      */
     public function isPurchasable(): bool
     {
+        if ($this->hasVariants()) {
+            return $this->activeVariants()->where('stock', '>', 0)->exists();
+        }
+
         return $this->is_active
             && ! $this->price_on_request
             && $this->price !== null

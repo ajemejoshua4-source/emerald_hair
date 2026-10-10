@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\DeliveryZone;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -61,6 +62,11 @@ class DatabaseSeeder extends Seeder
                     'featured' => true,
                 ],
             );
+        }
+
+        // Delivery zones. Fees must be confirmed by the business before launch.
+        foreach ([['Nationwide (courier)', 0], ['Pickup', 0]] as [$name, $fee]) {
+            DeliveryZone::firstOrCreate(['name' => $name], ['fee' => $fee, 'is_active' => true]);
         }
     }
 }

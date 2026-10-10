@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="adminnav">
-    <div class="wrap">
-        <a href="{{ route('admin.dashboard') }}">Dashboard</a>
-        <a href="{{ route('admin.products') }}">Products</a>
-    </div>
-</div>
+@include('admin.partials.nav')
+
 <section class="section">
     <div class="wrap">
         <div class="form">
             <h2>{{ $product->exists ? 'Edit' : 'Add' }} product</h2>
+
+            @if($product->exists)
+                <p><a href="{{ route('admin.variants', $product) }}">Manage variants</a></p>
+            @endif
 
             <form method="post"
                   enctype="multipart/form-data"

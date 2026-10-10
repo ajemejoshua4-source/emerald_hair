@@ -1,1 +1,48 @@
-@extends('layouts.app') @section('content')<div class="adminnav"><div class="wrap"><a href="{{ route('admin.dashboard') }}">Dashboard</a><a href="{{ route('admin.products') }}">Products</a><a href="{{ route('admin.categories') }}">Categories</a><a href="{{ route('admin.orders') }}">Orders</a><a href="{{ route('admin.enquiries') }}">Enquiries</a></div></div><section class="section"><div class="wrap"><h2>Orders</h2><table class="table"><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Payment</th><th>Save</th></tr>@foreach($orders as $o)<tr><td>{{ $o->order_number }}</td><td>{{ $o->customer_name }}<br>{{ $o->phone }}</td><td>₦{{ number_format($o->total,2) }}</td><form method="post" action="{{ route('admin.orders.update',$o) }}">@csrf @method('PATCH')<td><select name="status"><option value="pending" @selected($o->status==='pending')>Pending</option><option value="confirmed" @selected($o->status==='confirmed')>Confirmed</option><option value="processing" @selected($o->status==='processing')>Processing</option><option value="shipped" @selected($o->status==='shipped')>Shipped</option><option value="completed" @selected($o->status==='completed')>Completed</option><option value="cancelled" @selected($o->status==='cancelled')>Cancelled</option></select></td><td><select name="payment_status"><option value="unpaid" @selected($o->payment_status==='unpaid')>Unpaid</option><option value="paid" @selected($o->payment_status==='paid')>Paid</option><option value="refunded" @selected($o->payment_status==='refunded')>Refunded</option></select></td><td><button>Save</button></td></form></tr>@endforeach</table>{{ $orders->links() }}</div></section>@endsection
+@extends('layouts.app')
+
+@section('content')
+@include('admin.partials.nav')
+
+<section class="section">
+    <div class="wrap">
+        <h2>Orders</h2>
+
+        <form method="get" action="{{ route('admin.orders') }}" style="display:flex;gap:8px;max-width:520px;margin-bottom:20px">
+            <input name="q" value="{{ $q ?? '' }}" placeholder="Search order number, name or phone" style="flex:1">
+            <button class="btn">Search</button>
+        </form>
+
+        <table class="table">
+            <tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Payment</th><th>Save</th></tr>
+            @forelse($orders as $o)
+                <tr>
+                    <td>{{ $o->order_number }}</td>
+                    <td>{{ $o->customer_name }}<br>{{ $o->phone }}</td>
+                    <td>₦{{ number_format($o->total, 2) }}</td>
+                    <td colspan="3">
+                        <form method="post" action="{{ route('admin.orders.update', $o) }}" style="display:flex;gap:8px;flex-wrap:wrap">
+                            @csrf
+                            @method('PATCH')
+                            <select name="status">
+                                @foreach(['pending','confirmed','processing','shipped','completed','cancelled'] as $status)
+                                    <option value="{{ $status }}" @selected($o->status === $status)>{{ ucfirst($status) }}</option>
+                                @endforeach
+                            </select>
+                            <select name="payment_status">
+                                @foreach(['unpaid','paid','refunded'] as $payment)
+                                    <option value="{{ $payment }}" @selected($o->payment_status === $payment)>{{ ucfirst($payment) }}</option>
+                                @endforeach
+                            </select>
+                            <button>Save</button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="6">No orders found.</td></tr>
+            @endforelse
+        </table>
+
+        <div style="margin-top:20px">{{ $orders->links() }}</div>
+    </div>
+</section>
+@endsection

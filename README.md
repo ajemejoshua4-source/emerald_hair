@@ -3,9 +3,10 @@
 A luxury Emerald Hair storefront and ordering platform built on **Laravel 13**.
 
 Emerald Hair is a hair and beauty brand. This application powers the customer
-storefront (catalogue, cart, checkout, WhatsApp ordering, customer account,
-wishlist) and a secure administration dashboard (products, categories, orders,
-enquiries).
+storefront (catalogue, variants, cart, checkout, delivery, online payment,
+WhatsApp ordering, customer account, wishlist) and a secure administration
+dashboard (products, variants, categories, orders, delivery zones, enquiries,
+store settings).
 
 > Tagline: **Beauty. Quality. Confidence.** · Brand descriptor: **Luxury Hair & Beauty.**
 
@@ -19,6 +20,7 @@ enquiries).
 | PHP | 8.3+ (developed against 8.3, image uses 8.4) |
 | Database | SQLite (local default), MySQL, or PostgreSQL (production) |
 | Frontend | Blade templates with hand-written CSS (no build step required) |
+| Payments | Paystack (optional; disabled without keys) |
 | Tests | PHPUnit 12 (`php artisan test`) |
 | Tooling | Laravel Pint, Laravel Pail |
 
@@ -68,9 +70,11 @@ Change this password before going live.
 php artisan test
 ```
 
-The suite covers the storefront, product filtering, cart behaviour, checkout
-(with stock transactions), customer authentication, admin authorization and
-enquiries/newsletter signup.
+The suite (54 tests) covers the storefront, search/filtering, product variants,
+cart behaviour, checkout with stock transactions and delivery fees, customer
+authentication, admin authorization, settings/delivery-zone/variant management
+and Paystack payment verification (including webhook signature checks and
+idempotency).
 
 ---
 
@@ -78,29 +82,42 @@ enquiries/newsletter signup.
 
 **Storefront**
 - Editorial homepage with featured products and brand story
-- Shop with keyword search, category filter, and price sorting
-- Product detail pages with availability and "Price on request" handling
+- Shop with keyword search, category filter and price sorting
+- Product detail pages with variant (length/lace/colour) selection
 - Session-based shopping bag with quantity controls
 - Wishlist for signed-in customers
 - Customer registration, login, account and order history
-- Checkout that creates orders inside a database transaction and decrements
-  stock (prevents overselling)
+- Checkout that runs inside a database transaction, decrements stock (product or
+  variant) and applies delivery-zone fees — prevents overselling
+- Optional **Paystack** online payment
 - WhatsApp order handoff (does **not** mark an order as paid)
 - Contact/enquiry form and newsletter signup (rate limited)
 
-**Administration** (protected by authentication + an `is_admin` gate)
-- Dashboard with real counts, paid revenue and low-stock alerts
-- Product CRUD with image upload validation
+**Administration** (authentication + `is_admin` gate)
+- Dashboard with counts, paid revenue and low-stock alerts
+- Product CRUD with image upload validation and search
+- **Product variant** management (label, SKU, price, stock, active)
 - Category management
-- Order status / payment status updates
+- Order list with search and status / payment updates
+- **Delivery zone** management (name + fee)
+- **Store settings** (email, phone, WhatsApp, Instagram, announcement)
 - Customer enquiry management
+
+**Payments (Paystack)**
+- Server-side transaction initialisation (`/checkout/{order}/pay`)
+- Callback that **verifies** the transaction before settling an order
+- Webhook endpoint authenticated by HMAC SHA-512 signature and CSRF-exempt
+- Idempotent settlement: an order can only be marked paid once
+- Amount and currency are validated against the order before marking paid
+- A redirect or webhook alone never marks an order paid until verified
 
 **Security**
 - Server-side authorization for every admin route
-- Form request validation and CSRF protection on all state-changing requests
-- `is_admin` is not mass-assignable (cannot be self-granted via registration)
+- Validation and CSRF protection on all state-changing requests
+- `is_admin` is not mass-assignable (cannot be self-granted at registration)
 - Rate limiting on login, registration, contact and newsletter endpoints
 - Passwords hashed with the `hashed` cast
+- Webhook signature verification with constant-time comparison
 
 ---
 
@@ -117,6 +134,8 @@ The repository includes a `Dockerfile`, `.dockerignore` and `render.yaml`.
    - `EMERALD_ADMIN_PASSWORD` — a strong password
    - `APP_ENV=production`, `APP_DEBUG=false`
    - `DB_CONNECTION=pgsql` and `DATABASE_URL` (provided by the Render database)
+   - `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`, `PAYSTACK_CALLBACK_URL`
+     (optional — omit to keep WhatsApp-only checkout)
 4. Deploy. The container entrypoint caches config/routes/views and runs
    `php artisan migrate --force` on boot.
 5. After the first deploy, seed the database once (Render Shell, paid plans) with
@@ -133,6 +152,19 @@ The repository includes a `Dockerfile`, `.dockerignore` and `render.yaml`.
 
 ---
 
+## Payments setup (Paystack)
+
+1. Create keys at https://dashboard.paystack.com/#/settings/developers.
+2. Set `PAYSTACK_SECRET_KEY` and `PAYSTACK_PUBLIC_KEY` in `.env`.
+3. Set `PAYSTACK_CALLBACK_URL` to `https://your-domain/payments/paystack/callback`.
+4. In the Paystack dashboard, add the webhook URL
+   `https://your-domain/payments/paystack/webhook`.
+
+Without a secret key, online payment is disabled and the storefront falls back
+to WhatsApp order confirmation.
+
+---
+
 ## Business data still required
 
 The following must be supplied/verified by the business before accepting real
@@ -142,17 +174,14 @@ orders (placeholder data is intentionally avoided):
 - Product photography and real inventory levels
 - Delivery fees and delivery regions
 - Final legal policy text (delivery, returns, privacy, terms)
-- Payment provider credentials (no payment gateway is wired up yet)
+- Production Paystack credentials (test integration is ready)
 
 ---
 
 ## Known gaps / next phases
 
-- **Product variants** (length, lace type, colour, density) are not yet modelled.
-- **Paystack (or other) payment integration** is not implemented — checkout
-  currently creates an unpaid order for WhatsApp confirmation only.
-- **Store settings, delivery-address, and payment-transaction tables** from the
-  extended specification are not yet added.
+- **Order confirmation emails** are written to the log driver by default;
+  configure a real mailer and enable order notifications.
+- **Object storage** for admin-uploaded product images (S3/R2) for production.
 - **Sitemap / canonical SEO metadata** beyond titles and descriptions.
-- Emails are written to the log driver by default; configure a real mailer for
-  order notifications.
+- **Automated database backups** and uptime monitoring for production.
