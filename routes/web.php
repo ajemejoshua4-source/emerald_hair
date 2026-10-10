@@ -1,8 +1,95 @@
 <?php
-use Illuminate\Support\Facades\Route; use App\Http\Controllers\{StorefrontController,AuthController,CartController,WishlistController,CheckoutController,ContactController,AccountController,AdminController};
-Route::get('/',[StorefrontController::class,'home'])->name('home');Route::get('/shop',[StorefrontController::class,'shop'])->name('shop');Route::get('/products/{product:slug}',[StorefrontController::class,'product'])->name('products.show');
-Route::get('/contact',[ContactController::class,'contact'])->name('contact');Route::post('/contact',[ContactController::class,'enquiry'])->name('contact.send');Route::post('/newsletter',[ContactController::class,'newsletter'])->name('newsletter');
-Route::get('/login',[AuthController::class,'showLogin'])->name('login');Route::post('/login',[AuthController::class,'login'])->name('login.store');Route::get('/register',[AuthController::class,'showRegister'])->name('register');Route::post('/register',[AuthController::class,'register'])->name('register.store');Route::post('/logout',[AuthController::class,'logout'])->middleware('auth')->name('logout');
-Route::get('/bag',[CartController::class,'index'])->name('cart');Route::post('/bag/{product}/add',[CartController::class,'add'])->name('cart.add');Route::patch('/bag',[CartController::class,'update'])->name('cart.update');Route::delete('/bag/{id}',[CartController::class,'remove'])->name('cart.remove');
-Route::middleware('auth')->group(function(){Route::get('/account',[AccountController::class,'index'])->name('account');Route::get('/wishlist',[WishlistController::class,'index'])->name('wishlist');Route::post('/wishlist/{product}',[WishlistController::class,'toggle'])->name('wishlist.toggle');Route::get('/checkout',[CheckoutController::class,'create'])->name('checkout');Route::post('/checkout',[CheckoutController::class,'store'])->name('checkout.store');});
-Route::prefix('admin')->middleware(['auth','admin'])->group(function(){Route::get('/',[AdminController::class,'dashboard'])->name('admin.dashboard');Route::get('/products',[AdminController::class,'products'])->name('admin.products');Route::get('/products/create',[AdminController::class,'productCreate'])->name('admin.products.create');Route::post('/products',[AdminController::class,'productStore'])->name('admin.products.store');Route::get('/products/{product}/edit',[AdminController::class,'productEdit'])->name('admin.products.edit');Route::put('/products/{product}',[AdminController::class,'productUpdate'])->name('admin.products.update');Route::delete('/products/{product}',[AdminController::class,'productDelete'])->name('admin.products.delete');Route::get('/categories',[AdminController::class,'categories'])->name('admin.categories');Route::post('/categories',[AdminController::class,'categoryStore'])->name('admin.categories.store');Route::delete('/categories/{category}',[AdminController::class,'categoryDelete'])->name('admin.categories.delete');Route::get('/orders',[AdminController::class,'orders'])->name('admin.orders');Route::patch('/orders/{order}',[AdminController::class,'orderUpdate'])->name('admin.orders.update');Route::get('/enquiries',[AdminController::class,'enquiries'])->name('admin.enquiries');Route::patch('/enquiries/{enquiry}',[AdminController::class,'enquiryUpdate'])->name('admin.enquiries.update');});
+
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\StorefrontController;
+use App\Http\Controllers\WishlistController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Storefront
+|--------------------------------------------------------------------------
+*/
+Route::get('/', [StorefrontController::class, 'home'])->name('home');
+Route::get('/shop', [StorefrontController::class, 'shop'])->name('shop');
+Route::get('/products/{product:slug}', [StorefrontController::class, 'product'])->name('products.show');
+
+/*
+|--------------------------------------------------------------------------
+| Contact & newsletter (rate limited against abuse)
+|--------------------------------------------------------------------------
+*/
+Route::get('/contact', [ContactController::class, 'contact'])->name('contact');
+Route::post('/contact', [ContactController::class, 'enquiry'])->middleware('throttle:10,1')->name('contact.send');
+Route::post('/newsletter', [ContactController::class, 'newsletter'])->middleware('throttle:10,1')->name('newsletter');
+
+/*
+|--------------------------------------------------------------------------
+| Authentication
+|--------------------------------------------------------------------------
+*/
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1')->name('login.store');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1')->name('register.store');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| Shopping bag
+|--------------------------------------------------------------------------
+*/
+Route::get('/bag', [CartController::class, 'index'])->name('cart');
+Route::post('/bag/{product}/add', [CartController::class, 'add'])->name('cart.add');
+Route::patch('/bag', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/bag/{id}', [CartController::class, 'remove'])->name('cart.remove');
+
+/*
+|--------------------------------------------------------------------------
+| Customer account, wishlist & checkout
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+    Route::get('/account', [AccountController::class, 'index'])->name('account');
+
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist');
+    Route::post('/wishlist/{product}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+
+    Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/checkout/{order}/success', [CheckoutController::class, 'success'])->name('checkout.success');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Administration
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+
+    Route::get('/products', [AdminController::class, 'products'])->name('products');
+    Route::get('/products/create', [AdminController::class, 'productCreate'])->name('products.create');
+    Route::post('/products', [AdminController::class, 'productStore'])->name('products.store');
+    Route::get('/products/{product}/edit', [AdminController::class, 'productEdit'])->name('products.edit');
+    Route::put('/products/{product}', [AdminController::class, 'productUpdate'])->name('products.update');
+    Route::delete('/products/{product}', [AdminController::class, 'productDelete'])->name('products.delete');
+
+    Route::get('/categories', [AdminController::class, 'categories'])->name('categories');
+    Route::post('/categories', [AdminController::class, 'categoryStore'])->name('categories.store');
+    Route::delete('/categories/{category}', [AdminController::class, 'categoryDelete'])->name('categories.delete');
+
+    Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+    Route::patch('/orders/{order}', [AdminController::class, 'orderUpdate'])->name('orders.update');
+
+    Route::get('/enquiries', [AdminController::class, 'enquiries'])->name('enquiries');
+    Route::patch('/enquiries/{enquiry}', [AdminController::class, 'enquiryUpdate'])->name('enquiries.update');
+});

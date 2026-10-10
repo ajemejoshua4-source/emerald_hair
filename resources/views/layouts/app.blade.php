@@ -1,3 +1,104 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ $title ?? 'Emerald Hair — Beauty. Quality. Confidence.' }}</title><meta name="description" content="Emerald Hair — luxury hair and beauty."><style>
-:root{--green:#0f4d3a;--gold:#b58a3a;--ink:#17231f;--cream:#f8f7f2;--line:#e6e3d9}*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;color:var(--ink);background:#fff}a{text-decoration:none;color:inherit}.wrap{max-width:1180px;margin:auto;padding:0 22px}.top{background:var(--green);color:#fff;text-align:center;padding:8px;font-size:12px;letter-spacing:.08em}.nav{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}.navin{height:76px;display:flex;align-items:center;justify-content:space-between;gap:20px}.logo{font-family:Georgia,serif;font-size:25px;color:var(--green)}.links{display:flex;gap:22px;font-size:14px}.actions{display:flex;gap:12px;align-items:center}.btn{display:inline-block;border:1px solid var(--green);padding:12px 18px;border-radius:3px;background:var(--green);color:#fff;cursor:pointer}.btn.alt{background:#fff;color:var(--green)}.hero{background:var(--cream);padding:90px 0}.hero h1{font:500 clamp(45px,7vw,88px)/.95 Georgia,serif;max-width:760px;margin:15px 0}.eyebrow{color:var(--gold);text-transform:uppercase;letter-spacing:.18em;font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}.section{padding:75px 0}.section h2{font:500 42px Georgia,serif;margin:0 0 28px}.card{border:1px solid var(--line);background:#fff}.pic{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}.pad{padding:18px}.muted{color:#6b736e}.price{font-weight:700;color:var(--green)}.chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.chip{padding:8px 13px;border:1px solid var(--line);border-radius:30px}.form{max-width:650px}.field{margin-bottom:15px}.field label{display:block;font-size:13px;margin-bottom:7px}.field input,.field textarea,.field select{width:100%;padding:13px;border:1px solid #d9d7cf;border-radius:3px;font:inherit}.flash{padding:12px;margin:15px 0;background:#f0f8f3}.error{color:#a21b1b}.footer{background:var(--green);color:#fff;padding:55px 0;margin-top:50px}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:13px;border-bottom:1px solid var(--line);text-align:left}.adminnav{background:#122b23;color:#fff;padding:12px}.adminnav a{margin-right:18px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.stat{padding:25px;border:1px solid var(--line);background:#fff}.stat strong{display:block;font-size:28px;color:var(--green)}@media(max-width:760px){.links{display:none}.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.hero{padding:60px 0}.section{padding:50px 0}}@media(max-width:500px){.grid{grid-template-columns:1fr}}
-</style></head><body><div class="top">LUXURY HAIR & BEAUTY · BEAUTY. QUALITY. CONFIDENCE.</div><nav class="nav"><div class="wrap navin"><a class="logo" href="{{ route('home') }}">EMERALD HAIR</a><div class="links"><a href="{{ route('shop') }}">Shop</a><a href="{{ route('home') }}#story">Our Story</a><a href="{{ route('contact') }}">Contact</a></div><div class="actions"><a href="{{ route('cart') }}">Bag ({{ count(session('cart',[])) }})</a>@auth<a href="{{ route('account') }}">Account</a>@else<a href="{{ route('login') }}">Login</a>@endauth</div></div></nav>@if(session('success'))<div class="wrap flash">{{ session('success') }}</div>@endif@if(session('error'))<div class="wrap flash error">{{ session('error') }}</div>@endif@if($errors->any())<div class="wrap flash error">{{ $errors->first() }}</div>@endif{{ $slot ?? '' }}@yield('content')<footer class="footer"><div class="wrap"><div style="font:500 30px Georgia,serif">Emerald Hair</div><p>Beauty. Quality. Confidence.</p><p>WhatsApp: {{ config('emerald.whatsapp') }} · {{ config('emerald.email') }}</p><p><a href="{{ config('emerald.instagram') }}">Instagram @emeraldhair</a></p></div></footer></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ $title ?? 'Emerald Hair — Beauty. Quality. Confidence.' }}</title>
+    <meta name="description" content="Emerald Hair — luxury hair and beauty.">
+    <style>
+        :root{--green:#0f4d3a;--gold:#b58a3a;--ink:#17231f;--cream:#f8f7f2;--line:#e6e3d9}
+        *{box-sizing:border-box}
+        body{margin:0;font-family:Inter,Arial,sans-serif;color:var(--ink);background:#fff}
+        a{text-decoration:none;color:inherit}
+        .wrap{max-width:1180px;margin:auto;padding:0 22px}
+        .top{background:var(--green);color:#fff;text-align:center;padding:8px;font-size:12px;letter-spacing:.08em}
+        .nav{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}
+        .navin{height:76px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+        .logo{font-family:Georgia,serif;font-size:25px;color:var(--green)}
+        .links{display:flex;gap:22px;font-size:14px}
+        .actions{display:flex;gap:12px;align-items:center;font-size:14px}
+        .btn{display:inline-block;border:1px solid var(--green);padding:12px 18px;border-radius:3px;background:var(--green);color:#fff;cursor:pointer}
+        .btn.alt{background:#fff;color:var(--green)}
+        .hero{background:var(--cream);padding:90px 0}
+        .hero h1{font:500 clamp(45px,7vw,88px)/.95 Georgia,serif;max-width:760px;margin:15px 0}
+        .eyebrow{color:var(--gold);text-transform:uppercase;letter-spacing:.18em;font-size:12px}
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+        .section{padding:75px 0}
+        .section h2{font:500 42px Georgia,serif;margin:0 0 28px}
+        .card{border:1px solid var(--line);background:#fff}
+        .pic{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee}
+        .pad{padding:18px}
+        .muted{color:#6b736e}
+        .price{font-weight:700;color:var(--green)}
+        .chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}
+        .chip{padding:8px 13px;border:1px solid var(--line);border-radius:30px}
+        .form{max-width:650px}
+        .field{margin-bottom:15px}
+        .field label{display:block;font-size:13px;margin-bottom:7px}
+        .field input,.field textarea,.field select{width:100%;padding:13px;border:1px solid #d9d7cf;border-radius:3px;font:inherit}
+        .flash{padding:12px;margin:15px 0;background:#f0f8f3}
+        .error{color:#a21b1b}
+        .footer{background:var(--green);color:#fff;padding:55px 0;margin-top:50px}
+        .table{width:100%;border-collapse:collapse}
+        .table th,.table td{padding:13px;border-bottom:1px solid var(--line);text-align:left}
+        .adminnav{background:#122b23;color:#fff;padding:12px}
+        .adminnav a{margin-right:18px;color:#fff}
+        .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+        .stat{padding:25px;border:1px solid var(--line);background:#fff}
+        .stat strong{display:block;font-size:28px;color:var(--green)}
+        @media(max-width:760px){.links{display:none}.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.hero{padding:60px 0}.section{padding:50px 0}}
+        @media(max-width:500px){.grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+    <div class="top">LUXURY HAIR &amp; BEAUTY · BEAUTY. QUALITY. CONFIDENCE.</div>
+
+    <nav class="nav">
+        <div class="wrap navin">
+            <a class="logo" href="{{ route('home') }}">EMERALD HAIR</a>
+            <div class="links">
+                <a href="{{ route('shop') }}">Shop</a>
+                <a href="{{ route('home') }}#story">Our Story</a>
+                <a href="{{ route('contact') }}">Contact</a>
+            </div>
+            <div class="actions">
+                @auth
+                    <a href="{{ route('wishlist') }}">Wishlist</a>
+                @endauth
+                <a href="{{ route('cart') }}">Bag ({{ count(session('cart', [])) }})</a>
+                @auth
+                    <a href="{{ route('account') }}">Account</a>
+                    @if(auth()->user()->is_admin)
+                        <a href="{{ route('admin.dashboard') }}">Admin</a>
+                    @endif
+                @endauth
+                @guest
+                    <a href="{{ route('login') }}">Login</a>
+                @endguest
+            </div>
+        </div>
+    </nav>
+
+    @if(session('success'))
+        <div class="wrap flash">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="wrap flash error">{{ session('error') }}</div>
+    @endif
+    @if($errors->any())
+        <div class="wrap flash error">{{ $errors->first() }}</div>
+    @endif
+
+    {{ $slot ?? '' }}
+    @yield('content')
+
+    <footer class="footer">
+        <div class="wrap">
+            <div style="font:500 30px Georgia,serif">Emerald Hair</div>
+            <p>Beauty. Quality. Confidence.</p>
+            <p>WhatsApp: {{ config('emerald.whatsapp') }} · {{ config('emerald.email') }}</p>
+            <p><a href="{{ config('emerald.instagram') }}">Instagram @emeraldhair</a></p>
+        </div>
+    </footer>
+</body>
+</html>

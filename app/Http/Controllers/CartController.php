@@ -1,4 +1,92 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Models\Product; use Illuminate\Http\Request;
-class CartController extends Controller { private function cart(){return session('cart',[]);} public function index(){return view('cart.index',['cart'=>$this->cart()]);} public function add(Request $r,Product $product){$qty=max(1,(int)$r->input('quantity',1));abort_unless($product->is_active && $product->stock>0 && !$product->price_on_request && $product->price !== null,404);$cart=$this->cart();$id=(string)$product->id;if(isset($cart[$id]))$cart[$id]['quantity']=min($product->stock,$cart[$id]['quantity']+$qty);else $cart[$id]=['id'=>$product->id,'name'=>$product->name,'price'=>$product->price,'price_on_request'=>$product->price_on_request,'quantity'=>min($qty,$product->stock),'image'=>$product->image];session(['cart'=>$cart]);return back()->with('success','Added to bag.');} public function update(Request $r){$cart=$this->cart();foreach($r->input('quantity',[]) as $id=>$qty){if(isset($cart[$id]))$cart[$id]['quantity']=max(0,(int)$qty);if(isset($cart[$id])&&$cart[$id]['quantity']===0)unset($cart[$id]);}session(['cart'=>$cart]);return back()->with('success','Bag updated.');} public function remove($id){$cart=$this->cart();unset($cart[$id]);session(['cart'=>$cart]);return back();} }
+
+use App\Models\Product;
+use Illuminate\Http\Request;
+
+class CartController extends Controller
+{
+    /**
+     * Get the cart contents from the session.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function cart(): array
+    {
+        return session('cart', []);
+    }
+
+    private function saveCart(array $cart): void
+    {
+        session(['cart' => $cart]);
+    }
+
+    public function index()
+    {
+        return view('cart.index', ['cart' => $this->cart()]);
+    }
+
+    public function add(Request $request, Product $product)
+    {
+        $quantity = max(1, (int) $request->input('quantity', 1));
+
+        if (! $product->isPurchasable()) {
+            return back()->with('error', 'This piece is currently unavailable for online purchase. Please enquire on WhatsApp.');
+        }
+
+        $cart = $this->cart();
+        $id = (string) $product->getKey();
+        $existing = (int) ($cart[$id]['quantity'] ?? 0);
+
+        $cart[$id] = [
+            'id' => $product->getKey(),
+            'name' => $product->name,
+            'price' => (float) $product->price,
+            'price_on_request' => false,
+            'quantity' => min($product->stock, $existing + $quantity),
+            'image' => $product->image,
+        ];
+
+        $this->saveCart($cart);
+
+        return back()->with('success', 'Added to bag.');
+    }
+
+    public function update(Request $request)
+    {
+        $cart = $this->cart();
+
+        foreach ((array) $request->input('quantity', []) as $id => $quantity) {
+            $id = (string) $id;
+
+            if (! isset($cart[$id])) {
+                continue;
+            }
+
+            $quantity = max(0, (int) $quantity);
+
+            if ($quantity === 0) {
+                unset($cart[$id]);
+
+                continue;
+            }
+
+            $cart[$id]['quantity'] = $quantity;
+        }
+
+        $this->saveCart($cart);
+
+        return back()->with('success', 'Bag updated.');
+    }
+
+    public function remove(string $id)
+    {
+        $cart = $this->cart();
+        unset($cart[$id]);
+
+        $this->saveCart($cart);
+
+        return back()->with('success', 'Item removed from bag.');
+    }
+}

@@ -1,3 +1,41 @@
 <?php
-use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
-return new class extends Migration { public function up(){Schema::create('wishlists',function(Blueprint $t){$t->id();$t->foreignId('user_id')->constrained()->cascadeOnDelete();$t->foreignId('product_id')->constrained()->cascadeOnDelete();$t->unique(['user_id','product_id']);$t->timestamps();});Schema::create('enquiries',function(Blueprint $t){$t->id();$t->string('name');$t->string('email')->nullable();$t->string('phone')->nullable();$t->string('subject')->nullable();$t->text('message');$t->string('status')->default('new');$t->timestamps();});Schema::create('newsletter_subscribers',function(Blueprint $t){$t->id();$t->string('email')->unique();$t->timestamps();});} public function down(){Schema::dropIfExists('newsletter_subscribers');Schema::dropIfExists('enquiries');Schema::dropIfExists('wishlists');} };
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('wishlists', function (Blueprint $t) {
+            $t->id();
+            $t->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $t->foreignId('product_id')->constrained()->cascadeOnDelete();
+            $t->unique(['user_id', 'product_id']);
+            $t->timestamps();
+        });
+        Schema::create('enquiries', function (Blueprint $t) {
+            $t->id();
+            $t->string('name');
+            $t->string('email')->nullable();
+            $t->string('phone')->nullable();
+            $t->string('subject')->nullable();
+            $t->text('message');
+            $t->string('status')->default('new');
+            $t->timestamps();
+        });
+        Schema::create('newsletter_subscribers', function (Blueprint $t) {
+            $t->id();
+            $t->string('email')->unique();
+            $t->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('newsletter_subscribers');
+        Schema::dropIfExists('enquiries');
+        Schema::dropIfExists('wishlists');
+    }
+};
